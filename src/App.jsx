@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Send, Bot, User, Brain, Trash2, Search, Info, Mic, MicOff, Volume2, VolumeX, Upload, Link } from 'lucide-react'
+import { Send, Bot, User, Brain, Trash2, Search, Info, Mic, MicOff, Volume2, VolumeX, Upload, Link, Users, Crown, BarChart3 } from 'lucide-react'
 import MemorySystem from './memorySystem'
 import VoiceService from './voiceService'
+import MultiModelService from './multiModelService'
 
 function App() {
   const [messages, setMessages] = useState([])
@@ -25,6 +26,10 @@ function App() {
   const [voiceStatus, setVoiceStatus] = useState({})
   const [apiKey, setApiKey] = useState('')
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+  const [multiModelService] = useState(() => new MultiModelService())
+  const [teamMode, setTeamMode] = useState(false)
+  const [showTeamDetails, setShowTeamDetails] = useState(false)
+  const [teamStats, setTeamStats] = useState({})
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -102,7 +107,134 @@ Mensaje corregido:`
     }
   }
 
+  // Función para generar respuesta de equipo
+  const sendTeamMessage = async (e) => {
+    e.preventDefault()
+    
+    if (!inputMessage.trim() || isLoading) return
+
+    setIsLoading(true)
+    setError('')
+
+    try {
+      // Paso 1: Corregir la redacción del mensaje
+      const correctedMessage = await correctMessage(inputMessage)
+      
+      // Crear mensaje del usuario con el texto original
+      const userMessage = {
+        id: Date.now(),
+        content: inputMessage,
+        role: 'user',
+        timestamp: new Date(),
+        correctedContent: correctedMessage !== inputMessage ? correctedMessage : null
+      }
+
+      setMessages(prev => [...prev, userMessage])
+      setInputMessage('')
+
+      // Paso 2: Usar Memoria Atencional Selectiva con el mensaje corregido
+      const attentionPipeline = await memorySystem.selectiveAttentionPipeline(correctedMessage)
+      
+      // Obtener información del usuario de la sesión actual
+      const userInfo = memorySystem.shortTermMemory.currentSession.userInfo
+      const userContext = []
+      
+      if (userInfo.name) {
+        userContext.push(`El usuario se llama ${userInfo.name}`)
+      }
+      if (userInfo.age) {
+        userContext.push(`Tiene ${userInfo.age} años`)
+      }
+      if (userInfo.interests.length > 0) {
+        userContext.push(`Le interesa: ${userInfo.interests.join(', ')}`)
+      }
+      if (userInfo.preferences.length > 0) {
+        userContext.push(`Sus preferencias: ${userInfo.preferences.join(', ')}`)
+      }
+      
+      // Crear contexto para el equipo de IA
+      let context = ''
+      if (attentionPipeline.compiledContext.context || userContext.length > 0) {
+        context = `🧠 Información del usuario:
+${userContext.length > 0 ? userContext.join('\n') : 'No tengo información específica del usuario aún'}
+
+🧠 Contexto relevante:
+${attentionPipeline.compiledContext.context || 'Sin contexto adicional'}
+
+🎭 INSTRUCCIONES: Eres Roxy Megurdy, una IA emocionalmente reactiva. Sé expresiva, usa emojis y mantén un tono natural y empático.`
+      }
+
+      // Paso 3: Generar respuesta de equipo
+      const teamResult = await multiModelService.generateTeamResponse(correctedMessage, context)
+      
+      // Crear mensaje del asistente con respuesta de consenso
+      const assistantMessage = {
+        id: Date.now() + 1,
+        content: teamResult.finalResponse.response,
+        role: 'assistant',
+        timestamp: new Date(),
+        isTeamResponse: true,
+        teamData: {
+          consensusMethod: teamResult.finalResponse.consensusMethod,
+          modelsUsed: teamResult.teamStats.modelsUsed,
+          averageScore: teamResult.teamStats.averageScore,
+          bestScore: teamResult.teamStats.bestScore,
+          allResponses: teamResult.allResponses
+        }
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+      
+      // Actualizar estadísticas del equipo
+      setTeamStats(teamResult.teamStats)
+      
+      // Procesar mensaje con sistema de memoria completo usando el mensaje corregido
+      const memoryResult = await memorySystem.processMessage(correctedMessage, teamResult.finalResponse.response)
+      
+      // Mostrar información de memoria, atención y equipo
+      let successMessage = ''
+      if (memoryResult.importance.isImportant) {
+        successMessage += `🧠 Memoria actualizada: `
+        if (memoryResult.entities.names.length > 0) successMessage += 'Nombre detectado '
+        if (memoryResult.entities.places.length > 0) successMessage += 'Ubicación detectada '
+        if (memoryResult.memoryIntents.length > 0) successMessage += 'Intención de memoria detectada '
+      }
+      
+      // Información del equipo
+      successMessage += `👥 Equipo: ${teamResult.teamStats.modelsUsed} modelos, puntuación promedio: ${teamResult.teamStats.averageScore.toFixed(0)}/100`
+      
+      // Mostrar información de atención selectiva
+      if (attentionPipeline.attentionMetrics.efficiency > 0.7) {
+        successMessage += ` | 🎯 Atención: ${(attentionPipeline.attentionMetrics.efficiency * 100).toFixed(0)}%`
+      }
+      
+      if (successMessage) {
+        setSuccess(successMessage.trim())
+        setTimeout(() => setSuccess(''), 7000)
+      }
+      
+      // Actualizar estadísticas
+      await loadMemoryStats()
+      
+      // Reproducir respuesta con voz si está habilitado
+      if (voiceEnabled) {
+        await speakResponse(teamResult.finalResponse.response)
+      }
+      
+    } catch (error) {
+      console.error('Error sending team message:', error)
+      setError('Error al generar respuesta de equipo. Verifica que Ollama esté ejecutándose y los modelos estén disponibles.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const sendMessage = async (e) => {
+    // Si está en modo equipo, usar la función de equipo
+    if (teamMode) {
+      return await sendTeamMessage(e)
+    }
+
     e.preventDefault()
     
     if (!inputMessage.trim() || isLoading) return
@@ -702,6 +834,73 @@ Roxy:`
         </div>
       )}
 
+      {/* Panel de Detalles del Equipo */}
+      {showTeamDetails && teamMode && (
+        <div className="team-details-panel">
+          <h3>👥 Detalles del Equipo de IA</h3>
+          <button 
+            className="close-team-details-btn"
+            onClick={() => setShowTeamDetails(false)}
+          >
+            ✕
+          </button>
+          
+          <div className="team-details-content">
+            <div className="team-stats">
+              <h4>📊 Estadísticas del Equipo</h4>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <strong>Modelos activos:</strong> {teamStats.modelsUsed || 0}
+                </div>
+                <div className="stat-item">
+                  <strong>Promedio calidad:</strong> {teamStats.averageScore ? `${teamStats.averageScore.toFixed(0)}/100` : 'N/A'}
+                </div>
+                <div className="stat-item">
+                  <strong>Mejor puntuación:</strong> {teamStats.bestScore ? `${teamStats.bestScore}/100` : 'N/A'}
+                </div>
+                <div className="stat-item">
+                  <strong>Método consenso:</strong> {teamStats.consensusMethod || 'N/A'}
+                </div>
+              </div>
+            </div>
+            
+            <div className="available-models">
+              <h4>🤖 Modelos Disponibles</h4>
+              <div className="models-list">
+                {availableModels.map(model => (
+                  <div key={model} className="model-item">
+                    <span className="model-name">{model}</span>
+                    <span className="model-status">✅ Activo</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="team-explanation">
+              <h4>ℹ️ Cómo Funciona el Modo Equipo</h4>
+              <div className="explanation-content">
+                <p>🔄 <strong>Proceso:</strong></p>
+                <ol>
+                  <li>Todos los modelos generan una respuesta independiente</li>
+                  <li>Se evalúa cada respuesta con criterios de calidad</li>
+                  <li>Se seleccionan las mejores respuestas</li>
+                  <li>Se genera una respuesta de consenso mejorada</li>
+                </ol>
+                
+                <p>📏 <strong>Criterios de Evaluación:</strong></p>
+                <ul>
+                  <li><strong>Relevancia:</strong> Qué tan relacionada está con tu pregunta</li>
+                  <li><strong>Completitud:</strong> Si la respuesta es suficientemente detallada</li>
+                  <li><strong>Coherencia:</strong> Claridad y estructura del texto</li>
+                  <li><strong>Especificidad:</strong> Evita respuestas muy genéricas</li>
+                  <li><strong>Utilidad:</strong> Información práctica y ejemplos</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Panel de Configuración de Voz */}
       {showVoiceSettings && voiceEnabled && (
         <div className="voice-settings-panel">
@@ -822,11 +1021,21 @@ Roxy:`
         )}
         
         {messages.map((message) => (
-          <div key={message.id} className={`message ${message.role}`}>
+          <div key={message.id} className={`message ${message.role} ${message.isTeamResponse ? 'team-response' : ''}`}>
             <div className="message-avatar">
-              {message.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+              {message.role === 'user' ? <User size={20} /> : 
+               message.isTeamResponse ? <Users size={20} /> : <Bot size={20} />}
             </div>
             <div className="message-content">
+              {message.isTeamResponse && (
+                <div className="team-response-header">
+                  <Crown size={16} />
+                  <span>Respuesta de Consenso del Equipo</span>
+                  <div className="team-stats-mini">
+                    {message.teamData?.modelsUsed} modelos • {message.teamData?.averageScore?.toFixed(0)}/100 puntos
+                  </div>
+                </div>
+              )}
               <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
               {message.role === 'user' && message.correctedContent && (
                 <div style={{
@@ -848,6 +1057,26 @@ Roxy:`
                   <div style={{ whiteSpace: 'pre-wrap' }}>{message.correctedContent}</div>
                 </div>
               )}
+              {message.isTeamResponse && message.teamData && (
+                <div className="team-response-details">
+                  <details>
+                    <summary>Ver respuestas individuales de los modelos</summary>
+                    <div className="individual-responses">
+                      {message.teamData.allResponses?.map((response, index) => (
+                        <div key={index} className="individual-response">
+                          <div className="response-header">
+                            <strong>{response.model}</strong>
+                            <span className="response-score">{response.evaluationScore}/100</span>
+                          </div>
+                          <div className="response-content">
+                            {response.response}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </div>
+              )}
               <div style={{ 
                 fontSize: '0.8rem', 
                 opacity: 0.7, 
@@ -855,6 +1084,11 @@ Roxy:`
                 textAlign: message.role === 'user' ? 'right' : 'left'
               }}>
                 {formatTime(message.timestamp)}
+                {message.isTeamResponse && (
+                  <span style={{ marginLeft: '8px', color: '#4A90E2' }}>
+                    👥 Equipo
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -882,21 +1116,47 @@ Roxy:`
       </div>
 
       <div className="chat-input-container">
-        <select 
-          className="model-selector"
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-        >
-          {availableModels.length > 0 ? (
-            availableModels.map(model => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))
-          ) : (
-            <option value="llama2">llama2</option>
+        <div className="input-controls">
+          {!teamMode && (
+            <select 
+              className="model-selector"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {availableModels.length > 0 ? (
+                availableModels.map(model => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))
+              ) : (
+                <option value="llama2">llama2</option>
+              )}
+            </select>
           )}
-        </select>
+          
+          <button
+            type="button"
+            className={`team-mode-toggle ${teamMode ? 'active' : ''}`}
+            onClick={() => setTeamMode(!teamMode)}
+            title={teamMode ? 'Cambiar a modo individual' : 'Cambiar a modo equipo'}
+          >
+            {teamMode ? <Users className="icon" /> : <Bot className="icon" />}
+            {teamMode ? 'Equipo' : 'Individual'}
+          </button>
+          
+          {teamMode && (
+            <button
+              type="button"
+              className="team-details-toggle"
+              onClick={() => setShowTeamDetails(!showTeamDetails)}
+              title="Ver detalles del equipo"
+            >
+              <BarChart3 className="icon" />
+              Detalles
+            </button>
+          )}
+        </div>
 
         <form onSubmit={sendMessage} className="chat-input-form">
           <textarea
