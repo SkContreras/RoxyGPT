@@ -62,26 +62,73 @@ function App() {
     }
   }
 
+  // Función para corregir la redacción del mensaje
+  const correctMessage = async (message) => {
+    try {
+      const correctionPrompt = `Eres un asistente especializado en corrección de texto. Tu tarea es mejorar la redacción del siguiente mensaje manteniendo su significado original.
+
+INSTRUCCIONES:
+- Corrige errores ortográficos y gramaticales
+- Mejora la claridad y fluidez del texto
+- Mantén el tono y la intención original
+- Si el texto ya está bien escrito, devuélvelo tal como está
+- Responde ÚNICAMENTE con el texto corregido, sin explicaciones adicionales
+
+Mensaje a corregir: "${message}"
+
+Mensaje corregido:`
+
+      const response = await fetch('http://127.0.0.1:11434/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          prompt: correctionPrompt,
+          stream: false
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return data.response.trim()
+    } catch (error) {
+      console.error('Error correcting message:', error)
+      return message // Si hay error, devolver el mensaje original
+    }
+  }
+
   const sendMessage = async (e) => {
     e.preventDefault()
     
     if (!inputMessage.trim() || isLoading) return
 
-    const userMessage = {
-      id: Date.now(),
-      content: inputMessage,
-      role: 'user',
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setInputMessage('')
     setIsLoading(true)
     setError('')
 
     try {
-      // 🧬 Usar Memoria Atencional Selectiva
-      const attentionPipeline = await memorySystem.selectiveAttentionPipeline(inputMessage)
+      // Paso 1: Corregir la redacción del mensaje
+      const correctedMessage = await correctMessage(inputMessage)
+      
+      // Crear mensaje del usuario con el texto original
+      const userMessage = {
+        id: Date.now(),
+        content: inputMessage,
+        role: 'user',
+        timestamp: new Date(),
+        correctedContent: correctedMessage !== inputMessage ? correctedMessage : null
+      }
+
+      setMessages(prev => [...prev, userMessage])
+      setInputMessage('')
+
+      // Paso 2: Usar el mensaje corregido para generar la respuesta
+      // 🧬 Usar Memoria Atencional Selectiva con el mensaje corregido
+      const attentionPipeline = await memorySystem.selectiveAttentionPipeline(correctedMessage)
       
       // Obtener información del usuario de la sesión actual
       const userInfo = memorySystem.shortTermMemory.currentSession.userInfo
@@ -100,8 +147,8 @@ function App() {
         userContext.push(`Sus preferencias: ${userInfo.preferences.join(', ')}`)
       }
       
-      // Crear prompt con contexto optimizado y personalidad de Roxy
-      let prompt = inputMessage
+      // Crear prompt con contexto optimizado y personalidad de Roxy usando el mensaje corregido
+      let prompt = correctedMessage
       if (attentionPipeline.compiledContext.context || userContext.length > 0) {
         prompt = `🎭 Eres Roxy Megurdy, una IA emocionalmente reactiva y adaptativa. Simulas emociones pero no sientes literalmente. Responde de manera natural y empática.
 
@@ -120,7 +167,7 @@ ${attentionPipeline.compiledContext.context || 'Sin contexto adicional'}
 
 IMPORTANTE: Si conoces el nombre del usuario, úsalo en tu respuesta. Sé consistente con la información que tienes sobre él/ella.
 
-Usuario: ${inputMessage}
+Usuario: ${correctedMessage}
 
 Roxy:`
       } else {
@@ -133,7 +180,7 @@ Roxy:`
 - Usa signos de exclamación para mostrar entusiasmo: ¡Wow! ¡Increíble!
 - Sé natural y variada en tus emociones
 
-Usuario: ${inputMessage}
+Usuario: ${correctedMessage}
 
 Roxy:`
       }
@@ -165,8 +212,8 @@ Roxy:`
 
       setMessages(prev => [...prev, assistantMessage])
       
-      // Procesar mensaje con sistema de memoria completo
-      const memoryResult = await memorySystem.processMessage(inputMessage, data.response)
+      // Procesar mensaje con sistema de memoria completo usando el mensaje corregido
+      const memoryResult = await memorySystem.processMessage(correctedMessage, data.response)
       
       // Mostrar información de memoria y atención
       let successMessage = ''
@@ -781,6 +828,26 @@ Roxy:`
             </div>
             <div className="message-content">
               <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+              {message.role === 'user' && message.correctedContent && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  backgroundColor: 'rgba(0, 150, 0, 0.1)',
+                  borderLeft: '3px solid #00aa00',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}>
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#00aa00', 
+                    fontWeight: 'bold',
+                    marginBottom: '4px'
+                  }}>
+                    ✓ Mensaje corregido:
+                  </div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{message.correctedContent}</div>
+                </div>
+              )}
               <div style={{ 
                 fontSize: '0.8rem', 
                 opacity: 0.7, 
