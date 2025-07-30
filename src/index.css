@@ -472,6 +472,178 @@ body {
   background: rgba(74, 144, 226, 0.3);
 }
 
+/* 🔥 CONTROLES GPU */
+.gpu-mode-selector {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.gpu-mode-selector:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.gpu-mode-selector:focus {
+  border-color: #4A90E2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.gpu-mode-selector option {
+  background: #1a1a2e;
+  color: white;
+  padding: 8px;
+}
+
+.gpu-health-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.gpu-health-excellent {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.gpu-health-good {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.gpu-health-slow {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.gpu-health-error,
+.gpu-health-critical {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.gpu-diagnosis-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gpu-recommendations {
+  margin-top: 8px;
+}
+
+.gpu-recommendations ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.gpu-recommendations li {
+  padding: 4px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.gpu-recommendations li:before {
+  content: "💡 ";
+  margin-right: 6px;
+}
+
+/* Botón de precalentamiento */
+.warmup-button {
+  background: rgba(255, 87, 34, 0.2);
+  border: 1px solid #ff5722;
+  color: #ff5722;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.warmup-button:hover:not(:disabled) {
+  background: rgba(255, 87, 34, 0.3);
+  transform: translateY(-1px);
+}
+
+.warmup-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botón toggle RAM */
+.ram-toggle-button {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4caf50;
+  color: #4caf50;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ram-toggle-button:hover {
+  background: rgba(76, 175, 80, 0.3);
+  transform: translateY(-1px);
+}
+
+.ram-toggle-button.active {
+  background: rgba(76, 175, 80, 0.4);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+/* Estado RAM OFF */
+.ram-toggle-button:not(.active) {
+  background: rgba(158, 158, 158, 0.2);
+  border-color: #9e9e9e;
+  color: #9e9e9e;
+}
+
+.ram-toggle-button:not(.active):hover {
+  background: rgba(158, 158, 158, 0.3);
+}
+
+/* Botón de reset de emergencia */
+.emergency-reset-button {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid #f44336;
+  color: #f44336;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.emergency-reset-button:hover {
+  background: rgba(244, 67, 54, 0.3);
+  transform: translateY(-1px);
+}
+
 .team-response-header {
   display: flex;
   align-items: center;

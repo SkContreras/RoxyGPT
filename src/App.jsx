@@ -30,6 +30,11 @@ function App() {
   const [teamMode, setTeamMode] = useState(false)
   const [showTeamDetails, setShowTeamDetails] = useState(false)
   const [teamStats, setTeamStats] = useState({})
+  const [gpuMode, setGpuMode] = useState('balanced') // balanced, speed, quality
+  const [showGpuDiagnosis, setShowGpuDiagnosis] = useState(false)
+  const [gpuHealth, setGpuHealth] = useState(null)
+  const [ramCacheEnabled, setRamCacheEnabled] = useState(true)
+  const [showRamStats, setShowRamStats] = useState(false)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -48,6 +53,140 @@ function App() {
   const loadMemoryStats = async () => {
     const stats = await memorySystem.getMemoryStats()
     setMemoryStats(stats)
+  }
+
+  // 🔥 GESTIÓN GPU - Manejar cambio de modo
+  const handleGpuModeChange = (mode) => {
+    setGpuMode(mode)
+    
+    let config = {}
+    switch (mode) {
+      case 'speed':
+        config = {
+          maxConcurrentModels: 2,
+          prioritizeSpeed: true,
+          cooldownTime: 1000
+        }
+        setSuccess('🏃 Modo Velocidad: GPU optimizada para respuestas rápidas')
+        break
+      case 'quality':
+        config = {
+          maxConcurrentModels: 2,
+          prioritizeSpeed: false,
+          cooldownTime: 3000
+        }
+        setSuccess('🎯 Modo Calidad: GPU optimizada para mejores respuestas')
+        break
+      default: // balanced
+        config = {
+          maxConcurrentModels: 3,
+          prioritizeSpeed: false,
+          cooldownTime: 2000
+        }
+        setSuccess('⚖️ Modo Equilibrado: Balance entre velocidad y calidad')
+    }
+    
+    multiModelService.configureGPU(config)
+    
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
+  // Diagnosticar salud de GPU
+  const diagnoseGPU = async () => {
+    setShowGpuDiagnosis(true)
+    
+    try {
+      const diagnosis = await multiModelService.diagnoseGPUHealth()
+      setGpuHealth(diagnosis)
+      
+      let message = ''
+      switch (diagnosis.status) {
+        case 'excellent':
+          message = '💚 GPU en excelente estado'
+          break
+        case 'good':
+          message = '💛 GPU en buen estado'
+          break
+        case 'slow':
+          message = '🔶 GPU lenta, considera optimizar'
+          break
+        case 'error':
+        case 'critical':
+          message = '🔴 Problemas detectados en GPU'
+          break
+        default:
+          message = '❓ Estado GPU desconocido'
+      }
+      
+      setSuccess(message)
+    } catch (error) {
+      setError('Error al diagnosticar GPU: ' + error.message)
+    }
+  }
+
+  // 🔥 Precalentar modelos manualmente
+  const handleWarmupModels = async () => {
+    setIsLoading(true)
+    setSuccess('🔥 Iniciando precalentamiento híbrido GPU + RAM...')
+    
+    try {
+      await multiModelService.initializeWarmupAndCache()
+      const stats = multiModelService.getTeamStats()
+      
+      let message = `✅ Sistema híbrido listo! GPU: ${stats.warmupStatus.totalWarmed} modelos | RAM: ${stats.ramCache.totalCachedModels} modelos`
+      
+      // Agregar información sobre modelos problemáticos
+      if (stats.modelHealth.problematicModels > 0) {
+        message += ` | ⚠️ ${stats.modelHealth.problematicModels} modelos con problemas`
+      }
+      
+      setSuccess(message)
+      
+      // Mostrar modelos blacklisted si hay
+      if (stats.modelHealth.blacklisted.length > 0) {
+        setTimeout(() => {
+          setError(`🚫 Modelos con problemas: ${stats.modelHealth.blacklisted.join(', ')} - Usa "Resetear Salud" si crees que están arreglados`)
+        }, 2000)
+      }
+      
+      setTimeout(() => setSuccess(''), 6000)
+    } catch (error) {
+      setError('Error en precalentamiento: ' + error.message)
+      setTimeout(() => setError(''), 4000)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 🧠 Alternar caché RAM
+  const toggleRAMCache = () => {
+    const newState = !ramCacheEnabled
+    setRamCacheEnabled(newState)
+    
+    multiModelService.configureRAMCache({ enabled: newState })
+    
+    if (newState) {
+      setSuccess('🧠 Caché RAM activado - Modelos se precargarán en memoria')
+    } else {
+      setSuccess('💽 Caché RAM desactivado - Modelos cargarán desde disco')
+      multiModelService.clearRAMCache()
+    }
+    
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
+  // 🧹 Limpiar caché RAM
+  const clearRAMCache = () => {
+    multiModelService.clearRAMCache()
+    setSuccess('🧹 Caché RAM limpiado - Memoria liberada')
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
+  // 🩺 Resetear salud de modelos
+  const resetModelHealth = () => {
+    multiModelService.resetModelHealth()
+    setSuccess('🩺 Salud de modelos reseteada - Todos disponibles nuevamente')
+    setTimeout(() => setSuccess(''), 3000)
   }
 
   const fetchAvailableModels = async () => {
@@ -89,9 +228,13 @@ Mensaje corregido:`
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: selectedModel,
+          model: 'phi3:latest', // Modelo dedicado para corrección en CPU
           prompt: correctionPrompt,
-          stream: false
+          stream: false,
+          options: {
+            num_gpu: 0, // Forzar ejecución en CPU para evitar conflictos GPU
+            num_thread: 4 // Usar 4 hilos CPU para buen rendimiento
+          }
         })
       })
 
@@ -223,7 +366,33 @@ ${attentionPipeline.compiledContext.context || 'Sin contexto adicional'}
       
     } catch (error) {
       console.error('Error sending team message:', error)
-      setError('Error al generar respuesta de equipo. Verifica que Ollama esté ejecutándose y los modelos estén disponibles.')
+      
+      // 🚨 FALLBACK AUTOMÁTICO: Si falla equipo, intentar modo individual
+      if (error.message.includes('No se pudieron generar respuestas de ningún modelo')) {
+        setError('⚠️ Modo equipo falló - Intentando modo individual automáticamente...')
+        
+        try {
+          // Usar el sendMessage individual directamente
+          setTeamMode(false) // Temporalmente cambiar a individual
+          await new Promise(resolve => setTimeout(resolve, 500)) // Pequeña pausa
+          
+          // Crear evento falso para llamar sendMessage individual
+          const fakeEvent = { preventDefault: () => {} }
+          await sendMessage(fakeEvent)
+          
+          setSuccess('✅ Fallback exitoso: Respuesta generada en modo individual')
+          setTimeout(() => setSuccess(''), 4000)
+          return
+        } catch (fallbackError) {
+          setError('❌ Error crítico: Ollama no responde. Verifica que esté ejecutándose en http://127.0.0.1:11434')
+          setTimeout(() => setError(''), 10000)
+        } finally {
+          setTeamMode(true) // Restaurar modo equipo
+        }
+      } else {
+        setError('Error al generar respuesta de equipo: ' + error.message)
+        setTimeout(() => setError(''), 5000)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -1146,15 +1315,56 @@ Roxy:`
           </button>
           
           {teamMode && (
-            <button
-              type="button"
-              className="team-details-toggle"
-              onClick={() => setShowTeamDetails(!showTeamDetails)}
-              title="Ver detalles del equipo"
-            >
-              <BarChart3 className="icon" />
-              Detalles
-            </button>
+            <>
+              <button
+                type="button"
+                className="team-details-toggle"
+                onClick={() => setShowTeamDetails(!showTeamDetails)}
+                title="Ver detalles del equipo"
+              >
+                <BarChart3 className="icon" />
+                Detalles
+              </button>
+              
+              <select
+                className="gpu-mode-selector"
+                value={gpuMode}
+                onChange={(e) => handleGpuModeChange(e.target.value)}
+                title="Configuración GPU"
+              >
+                <option value="speed">🏃 Velocidad</option>
+                <option value="balanced">⚖️ Equilibrado</option>
+                <option value="quality">🎯 Calidad</option>
+              </select>
+              
+              <button
+                type="button"
+                className="warmup-button"
+                onClick={handleWarmupModels}
+                title="Precalentar modelos para respuestas más rápidas"
+                disabled={isLoading}
+              >
+                🔥 Precalentar
+              </button>
+              
+              <button
+                type="button"
+                className={`ram-toggle-button ${ramCacheEnabled ? 'active' : ''}`}
+                onClick={toggleRAMCache}
+                title={ramCacheEnabled ? 'Desactivar caché RAM' : 'Activar caché RAM'}
+              >
+                🧠 RAM {ramCacheEnabled ? 'ON' : 'OFF'}
+              </button>
+              
+              <button
+                type="button"
+                className="emergency-reset-button"
+                onClick={resetModelHealth}
+                title="Resetear salud de modelos (emergencia)"
+              >
+                🩺 Reset
+              </button>
+            </>
           )}
         </div>
 

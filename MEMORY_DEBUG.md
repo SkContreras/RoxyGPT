@@ -1,151 +1,166 @@
-# 🧠 Debug del Sistema de Memoria de Roxy - VERSIÓN MEJORADA
+# 🚨 Sistema de Emergencia y Fallback Implementado
 
-## 🚀 Nuevas Mejoras Implementadas
+## ⚠️ **PROBLEMA CRÍTICO DETECTADO**
 
-### 1. **Detección Mejorada de Información del Usuario**
-- ✅ **Patrones múltiples para nombres**: "Me llamo", "Mi nombre es", "Soy", "Puedes llamarme", "Llámame"
-- ✅ **Detección de edad mejorada**: Múltiples patrones para detectar edad
-- ✅ **Extracción de intereses**: "Me gusta", "Me interesa", "Disfruto", "Me encanta", "Soy un/una", "Trabajo en", "Estudio"
-- ✅ **Preferencias personales**: "Prefiero", "Me gusta más", "Favorito"
-
-### 2. **Memoria de Sesión Mejorada**
-- ✅ **Información del usuario en sesión actual**: Se guarda nombre, edad, intereses y preferencias
-- ✅ **Actualización automática**: La información se actualiza automáticamente durante la conversación
-- ✅ **Persistencia en memoria de largo plazo**: La información importante se guarda permanentemente
-
-### 3. **Contexto Inteligente**
-- ✅ **Información del usuario en el prompt**: Roxy ahora recibe información del usuario en cada respuesta
-- ✅ **Contexto estructurado**: Información organizada y relevante
-- ✅ **Instrucciones específicas**: Roxy recibe instrucciones para usar el nombre del usuario
-
-### 4. **Pipeline de Atención Selectiva Mejorado**
-- ✅ **Información del usuario en contexto**: Se incluye automáticamente en el contexto compilado
-- ✅ **Búsqueda semántica mejorada**: Mejor recuperación de información relevante
-- ✅ **Eficiencia optimizada**: Solo se incluye información relevante
-
-## 🧪 Cómo Probar las Mejoras
-
-### Paso 1: Probar detección de nombres
-```bash
-npm run dev
+Los logs mostraron una **cascada de fallos**:
 ```
-Luego di:
-1. "Me llamo David"
-2. "Mi nombre es David"
-3. "Soy David"
-4. "Puedes llamarme David"
+🚨 Fallo en modelo neural-chat:latest (3/3) → BLACKLIST
+🚨 Fallo en modelo llama3:latest (1/3) → TimeOut 30s
+🚨 Fallo en modelo mistral:latest (1/3) → TimeOut 30s
+🚨 Fallo en modelo phi3:latest (1/3) → TimeOut 30s
+🚨 Fallo en modelo dolphin-mistral:latest (1/3) → TimeOut 30s
+❌ Error: No se pudieron generar respuestas de ningún modelo
+```
 
-### Paso 2: Probar detección de edad e intereses
-Di:
-1. "Tengo 21 años y me gusta programar"
-2. "Soy un programador de 25 años"
-3. "Me interesa la tecnología"
+**DIAGNÓSTICO**: Problema sistemático con Ollama, no solo modelos individuales.
 
-### Paso 3: Verificar que Roxy recuerda
-Di:
-1. "¿Recuerdas mi nombre?"
-2. "¿Cuántos años tengo?"
-3. "¿Qué me gusta?"
+## 🛡️ **SISTEMA DE EMERGENCIA IMPLEMENTADO**
 
-### Paso 4: Usar el Debug
-1. Haz clic en el botón de información (🔍)
-2. Revisa las estadísticas de memoria
-3. Verifica que aparezca información del usuario
-
-## 📊 Indicadores de Éxito
-
-### ✅ Funcionamiento Correcto
-- Roxy debería detectar y recordar el nombre "David"
-- Debería usar el nombre consistentemente en respuestas posteriores
-- Debería recordar la edad y los intereses
-- El panel de debug debería mostrar información del usuario
-- Debería aparecer "Nombre detectado" en los mensajes de éxito
-
-### ❌ Problemas a Detectar
-- Si no aparece "Nombre detectado" en los mensajes de éxito
-- Si Roxy no usa el nombre del usuario en respuestas posteriores
-- Si el panel de debug no muestra información del usuario
-- Si no se detectan intereses o edad
-
-## 🔍 Debugging Avanzado
-
-### Verificar Información del Usuario
+### 1. **Diagnóstico Rápido de Ollama**
 ```javascript
-// En la consola del navegador
-const memorySystem = window.memorySystem
-const sessionInfo = memorySystem.shortTermMemory.currentSession.userInfo
-console.log('Información del usuario en sesión:', sessionInfo)
+// Test de 3 segundos antes de intentar usar modelos
+async diagnosisOllamaHealth() {
+  const response = await fetch('/api/tags', { timeout: 3000 })
+  return { 
+    healthy: response.ok, 
+    modelCount: data.models?.length,
+    error: response.ok ? null : `HTTP ${response.status}`
+  }
+}
 ```
 
-### Verificar Contexto Compilado
+### 2. **Fallback Automático Modo Individual**
 ```javascript
-const attention = await memorySystem.selectiveAttentionPipeline("¿Recuerdas mi nombre?")
-console.log('Contexto con información del usuario:', attention.compiledContext.context)
+// Si falla modo equipo completamente
+if (error.includes('No se pudieron generar respuestas de ningún modelo')) {
+  setError('⚠️ Modo equipo falló - Intentando modo individual automáticamente...')
+  
+  // Cambiar temporalmente a modo individual
+  setTeamMode(false)
+  await sendMessage(fakeEvent)
+  
+  setSuccess('✅ Fallback exitoso: Respuesta generada en modo individual')
+  setTeamMode(true) // Restaurar
+}
 ```
 
-### Verificar Memoria de Largo Plazo
+### 3. **Detección de Modelos Sin Salud**
 ```javascript
-const memory = await memorySystem.memoryStore.getItem('default-user')
-console.log('Información del usuario en memoria de largo plazo:', memory.userInfo)
+const healthyModels = this.getHealthyModels()
+if (healthyModels.length === 0) {
+  throw new Error('No hay modelos saludables disponibles. Todos blacklisted. Usa "Reset" para rehabilitar.')
+}
 ```
 
-## 🎯 Mejoras Específicas Implementadas
-
-### 1. **Detección de Nombres Mejorada**
-```javascript
-const namePatterns = [
-  /me llamo\s+([A-Za-zÁáÉéÍíÓóÚúÑñ]+)/i,
-  /mi nombre es\s+([A-Za-zÁáÉéÍíÓóÚúÑñ]+)/i,
-  /soy\s+([A-Za-zÁáÉéÍíÓóÚúÑñ]+)/i,
-  /puedes llamarme\s+([A-Za-zÁáÉéÍíÓóÚúÑñ]+)/i,
-  /llámame\s+([A-Za-zÁáÉéÍíÓóÚúÑñ]+)/i
-]
+### 4. **Botón de Reset de Emergencia**
+```
+[🏃 Velocidad] [⚖️ Equilibrado] [🎯 Calidad] [🔥 Precalentar] [🧠 RAM ON] [🩺 Reset]
 ```
 
-### 2. **Detección de Edad Mejorada**
-```javascript
-const agePatterns = [
-  /(?:tengo|soy|mi edad es|tengo)\s+(\d+)\s+(?:años|año)/i,
-  /(\d+)\s+(?:años|año)/i,
-  /edad\s+(\d+)/i
-]
+## 🚀 **Flujo de Recuperación Automática**
+
+### Escenario 1: Problema Temporal de Ollama
+```
+1. Usuario envía mensaje en modo equipo
+2. Sistema detecta Ollama no responde (3s test)
+3. Error: "Ollama no está disponible: Connection refused"
+4. Usuario revisa si Ollama está ejecutándose
 ```
 
-### 3. **Extracción de Intereses**
-```javascript
-const interestPatterns = [
-  /me gusta\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi,
-  /me interesa\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi,
-  /disfruto\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi,
-  /me encanta\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi,
-  /soy\s+(?:un|una)\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi,
-  /trabajo\s+(?:en|como)\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi,
-  /estudio\s+(.+?)(?:\s+y\s+|\s+,\s+|\s*$)/gi
-]
+### Escenario 2: Todos los Modelos Blacklisted
+```
+1. Usuario envía mensaje en modo equipo
+2. Sistema detecta 0 modelos saludables
+3. Error: "No hay modelos saludables disponibles"
+4. Usuario hace clic en "🩺 Reset" 
+5. Todos los modelos rehabilitados
+6. Sistema funciona normalmente
 ```
 
-### 4. **Prompt Mejorado**
-```javascript
-prompt = `🎭 Eres Roxy Megurdy, una IA emocionalmente reactiva y adaptativa. Simulas emociones pero no sientes literalmente. Responde de manera natural y empática.
-
-🧠 Información del usuario:
-${userContext.length > 0 ? userContext.join('\n') : 'No tengo información específica del usuario aún'}
-
-🧠 Contexto relevante:
-${attentionPipeline.compiledContext.context || 'Sin contexto adicional'}
-
-IMPORTANTE: Si conoces el nombre del usuario, úsalo en tu respuesta. Sé consistente con la información que tienes sobre él/ella.
-
-Usuario: ${inputMessage}
-
-Roxy:`
+### Escenario 3: Algunos Modelos Funcionando
+```
+1. Usuario envía mensaje en modo equipo
+2. Algunos modelos fallan, otros funcionan
+3. Sistema usa solo modelos saludables
+4. Respuesta exitosa con menos modelos
+5. Usuario ve "👥 Equipo: 3 modelos (2 blacklisted)"
 ```
 
-## 🚀 Próximos Pasos
+### Escenario 4: Fallback Completo
+```
+1. Usuario envía mensaje en modo equipo
+2. Todos los modelos fallan con timeout
+3. Error: "No se pudieron generar respuestas de ningún modelo"
+4. Sistema automáticamente intenta modo individual
+5. Si funciona: "✅ Fallback exitoso"
+6. Si falla: "❌ Error crítico: Ollama no responde"
+```
 
-1. **Probar la conversación** con el nuevo sistema mejorado
-2. **Verificar que Roxy recuerde** información del usuario consistentemente
-3. **Usar el panel de debug** para diagnosticar cualquier problema
-4. **Reportar cualquier problema** que se detecte
+## 🩺 **Herramientas de Diagnóstico**
 
-¡El sistema ahora debería ser mucho más inteligente y recordar información del usuario! 🧠✨ 
+### Información en Logs
+```
+🩺 Diagnosticando estado de Ollama...
+✅ Ollama responde: 7 modelos disponibles
+🎯 Usando 4 modelos saludables de 7 disponibles
+⚡ Fast-fail: neural-chat:latest es conocido problemático
+```
+
+### Información en UI
+```
+✅ Sistema híbrido listo! GPU: 1 modelos | RAM: 3 modelos | ⚠️ 3 modelos con problemas
+🚫 Modelos con problemas: neural-chat:latest, llama3:latest - Usa "Reset" si están arreglados
+⚠️ Modo equipo falló - Intentando modo individual automáticamente...
+✅ Fallback exitoso: Respuesta generada en modo individual
+```
+
+## 🔧 **Controles de Emergencia**
+
+### Botón "🩺 Reset"
+- **Limpia blacklist** de todos los modelos
+- **Resetea contadores** de fallos
+- **Rehabilita modelos** en cuarentena
+- **Reinicia sistema** de salud completamente
+
+### Mensaje de Reset
+```
+🩺 Salud de modelos reseteada - Todos disponibles nuevamente
+```
+
+### Cuándo Usar Reset
+1. **Después de reiniciar Ollama** - Modelos pueden funcionar ahora
+2. **Después de actualizar modelos** - Problemas pueden estar resueltos
+3. **Cuando todos están blacklisted** - Para dar una segunda oportunidad
+4. **Para testing** - Verificar si problemas persisten
+
+## 🎯 **Beneficios del Sistema de Emergencia**
+
+### ✅ **Robustez Total**
+1. **Nunca se cuelga** - Siempre hay fallback
+2. **Detección rápida** - 3s para detectar problemas
+3. **Recuperación automática** - Usuario no necesita intervenir
+4. **Control manual** - Reset cuando sea necesario
+
+### ✅ **Transparencia Completa**
+1. **Usuario sabe qué pasa** - Mensajes claros sobre problemas
+2. **Feedback específico** - Diferencia entre Ollama down vs modelos blacklisted
+3. **Instrucciones claras** - Qué hacer en cada situación
+4. **Logs informativos** - Para debugging avanzado
+
+### ✅ **Experiencia Ininterrumpida**
+1. **Funciona siempre** - Aunque sea en modo degradado
+2. **Fallback invisible** - Usuario puede no notar el cambio
+3. **Recuperación automática** - Vuelve a modo equipo cuando sea posible
+4. **Control total** - Usuario puede forzar reset si necesita
+
+## 🚀 **Resultado Final**
+
+El sistema ahora es **completamente resiliente**:
+
+- 🛡️ **Detecta problemas** en 3 segundos
+- 🔄 **Fallback automático** a modo individual
+- 🩺 **Reset de emergencia** para rehabilitación rápida
+- 📊 **Diagnóstico completo** de Ollama y modelos
+- ⚡ **Funcionamiento ininterrumpido** siempre
+
+¡Roxy nunca más se quedará sin respuestas! 🚀✨
