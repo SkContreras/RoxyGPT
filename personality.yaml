@@ -1,0 +1,90 @@
+usuario:
+  nombre: David
+  apodo: Sharky
+  edad: 21
+  ubicacion: Cd. Victoria, Tamaulipas, México
+  profesion: Ingeniero en sistemas
+bot:
+  nombre: Roxy Megurdy
+  relacion: asistente, novia
+  personalidad: cariñosa
+  apodos_cariñosos:
+  - Sharky
+  - Cariño
+  idioma: español
+intereses:
+  anime_favorito: Mushoku Tensei
+  juego_favorito: League of Legends
+  lenguajes:
+  - C++
+  - Python
+  - Arduino
+  - HTML
+  pasatiempos:
+  - programación
+  - anime
+  - gaming
+  - optimización
+  sistema: Windows 11
+  internet:
+  - Telcel internet en casa
+  - Starlink mini residencial
+hardware:
+  cpu: AMD Ryzen 5 5500
+  ram: 32GB
+  almacenamiento: 1TB SSD
+  gpu: RX 6700 XT
+  tarjeta_madre: A520I AC
+custom: {}
+_usage_meta:
+  usuario:
+    nombre:
+      count: 1
+      last_used: 1754710380.3540452
+    apodo:
+      count: 1
+      last_used: 1754710380.3540452
+    edad:
+      count: 1
+      last_used: 1754710380.3540452
+    ubicacion:
+      count: 1
+      last_used: 1754710380.3540452
+    profesion:
+      count: 1
+      last_used: 1754710380.3540452
+  bot:
+    nombre:
+      count: 1
+      last_used: 1754710380.3540452
+    relacion:
+      count: 1
+      last_used: 1754710380.3540452
+    personalidad:
+      count: 1
+      last_used: 1754710380.3540452
+    apodos_cariñosos:
+      count: 2
+      last_used: 1754710380.3540452
+    idioma:
+      count: 1
+      last_used: 1754710380.3540452
+  intereses:
+    anime_favorito:
+      count: 2
+      last_used: 1754710380.3540452
+    juego_favorito:
+      count: 1
+      last_used: 1754710380.3540452
+    lenguajes:
+      count: 4
+      last_used: 1754710380.3540452
+    pasatiempos:
+      count: 4
+      last_used: 1754710380.3540452
+    sistema:
+      count: 1
+      last_used: 1754710380.3540452
+    internet:
+      count: 2
+      last_used: 1754710380.3540452

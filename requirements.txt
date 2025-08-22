@@ -1,0 +1,40 @@
+# Dependencias para el Bot Roxy Megurdy
+# ====================================
+
+# Reconocimiento de voz
+SpeechRecognition==3.10.0
+pyaudio==0.2.11
+
+# Audio y sonido
+pygame==2.5.2
+pydub==0.25.1
+
+# APIs y requests
+requests==2.31.0
+ollama==0.2.1
+
+# Configuración YAML de personalidad
+PyYAML==6.0.1
+
+# Spotify Premium API (auto-reproducción)
+spotipy==2.22.1
+
+# Auto-control de teclado (opcional para auto-play)
+pyautogui==0.9.54
+
+# Utilities
+python-dotenv==1.0.0
+colorama==0.4.6
+psutil==5.9.8
+
+# Procesamiento de texto
+regex==2023.8.8
+
+# Para Windows (opcional, mejora compatibilidad)
+pywin32==306; sys_platform == "win32"
+
+# ElevenLabs (si se usa)
+elevenlabs==0.2.26
+
+# xAI/OpenAI (si se usa)
+openai==1.12.0

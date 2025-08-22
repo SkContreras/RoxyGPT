@@ -1,0 +1,83 @@
+# Archivos temporales y caché
+cache/
+temp_audio/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+
+# Archivos de configuración personal y credenciales
+.env
+.env.local
+.env.production
+roxy_microphone_config.json
+
+# CREDENCIALES SENSIBLES - NO SUBIR
+spotify_tokens.json
+*.key
+*.pem
+config.json
+secrets.json
+
+# Archivos de audio temporales
+*.mp3
+!audio/*.mp3
+!audios_fischl_solo/*.mp3
+!audios_fischl_wav_elevenlabs/*.mp3
+
+# Archivos de memoria y datos temporales
+memoria.txt
+roxy_memory.json
+dj_history.json
+conversation_memory.json
+learning_data.json
+command_corrections.json
+music_history.json
+
+# Caché de servicios externos
+.spotify_cache
+.cache
+*.cache
+
+# Archivos de respaldo y temporales
+backups/temp_*
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# VS Code
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+*.sublime-project
+*.sublime-workspace
+.idea/
+*.iml
+
+# Archivos específicos del proyecto que contienen datos personales
+cache/spotify_*.json
+cache/user_*.json
+cache/memoria.txt
+cache/roxy_memory.json
